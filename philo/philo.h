@@ -6,7 +6,7 @@
 /*   By: gsaile <gsaile@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/12/19 13:19:12 by gsaile            #+#    #+#             */
-/*   Updated: 2023/01/06 16:28:30 by gsaile           ###   ########.fr       */
+/*   Updated: 2023/01/29 16:45:53 by gsaile           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,12 +31,29 @@ typedef struct s_philo
 	int				rounds;
 	int				last_meal;
 	int				index;
+	int				finished;
 }					t_philo;
 
+/* - - - - - ft_atoi.c - - - - - */
 int					ft_atoi(const char *str);
 int					ft_atoi_test(const char *str);
+
+/* - - - - - ft_putstr_fd.c - - - - - */
 int					ft_putstr_fd(int fd, char *s);
 int					ft_strlen(const char *s);
-void				ft_lstclear(t_philo **lst);
+
+/* - - - - - init.c - - - - - */
+t_philo				*init_data(int ac, char **av, pthread_mutex_t *forks);
+pthread_mutex_t		*init_forks(char **av);
+t_philo				*init_philos(int ac, char **av, pthread_mutex_t *forks,
+						int nb_philos);
+t_philo				*detach_philos(t_philo *philos, int nb_philos,
+						pthread_mutex_t *forks);
+
+/* - - - - - utils.c - - - - - */
+int					chrono(void);
+void				ft_sleep(int time, t_philo *philo);
+void				set_finished(t_philo *philos);
+void				*philo(void *arg);
 
 #endif

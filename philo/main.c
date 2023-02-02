@@ -6,42 +6,29 @@
 /*   By: gsaile <gsaile@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/01/06 14:52:06 by gsaile            #+#    #+#             */
-/*   Updated: 2023/01/06 17:00:36 by gsaile           ###   ########.fr       */
+/*   Updated: 2023/01/30 10:04:43 by gsaile           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "philo.h"
 
-int	chrono(void)
+static int	all_philos_ate(t_philo *philos)
 {
-	static struct timeval	start;
-	struct timeval			t;
-	int						elapsed;
+	int	i;
 
-	gettimeofday(&t, NULL);
-	if (start.tv_usec == 0 && start.tv_sec == 0)
-		start = t;
-	elapsed = (t.tv_sec - start.tv_sec) * 1000;
-	elapsed += (t.tv_usec - start.tv_usec) / 1000;
-	return (elapsed);
-}
-
-void	ft_sleep(int time, t_philo *philo)
-{
-	int	start;
-
-	start = chrono();
-	while (chrono() < start + time)
+	i = 0;
+	if (philos[0].rounds == -1)
+		return (0);
+	while (i < philos[0].nb_philos)
 	{
-		if (chrono() - philo->last_meal >= philo->die)
-		{
-			printf("%d %d died\n", chrono(), philo->index);
-			exit(0);
-		}
+		if (philos[i].meals < philos[i].rounds)
+			return (0);
+		i++;
 	}
+	return (1);
 }
 
-char	*check_args(int ac, char **av)
+static char	*check_args(int ac, char **av)
 {
 	int	i;
 
@@ -50,115 +37,52 @@ char	*check_args(int ac, char **av)
 		return ("Wrong number of arguments.\n");
 	while (i < ac)
 		if (ft_atoi_test(av[i++]) == 0)
-			return ("Arguments must be positive numbers only.\n");
+			return ("Arguments must be positive numbers and fit in an int.\n");
 	return (NULL);
 }
 
-void	*philo(void *arg)
+static int	loop(t_philo *philos)
 {
-	t_philo	*philo;
+	int	i;
 
-	philo = arg;
-	while (philo->rounds == -1 || philo->meals < philo->rounds)
+	while (1)
 	{
-		pthread_mutex_lock(&(philo->forks[philo->index]));
-		printf("%d %d has taken a fork\n", chrono(), philo->index);
-		pthread_mutex_lock(&(philo->forks[(philo->index + 1)
-				% philo->nb_philos]));
-		printf("%d %d has taken a fork\n", chrono(), philo->index);
-		printf("%d %d is eating\n", chrono(), philo->index);
-		philo->last_meal = chrono();
-		ft_sleep(philo->eat, philo);
-		philo->meals++;
-		pthread_mutex_unlock(&(philo->forks[philo->index]));
-		pthread_mutex_unlock(&(philo->forks[(philo->index + 1)
-				% philo->nb_philos]));
-		printf("%d %d is sleeping\n", chrono(), philo->index);
-		ft_sleep(philo->sleep, philo);
-		printf("%d %d is thinking\n", chrono(), philo->index);
-	}
-	return (NULL);
-}
-
-t_philo	*init_data(int ac, char **av)
-{
-	t_philo			*philos;
-	int				nb_philos;
-	int				i;
-	pthread_mutex_t	*forks;
-
-	nb_philos = ft_atoi(av[1]);
-	if (nb_philos == 1)
-	{
-		printf("0 1 has taken a fork\n");
-		usleep(1000 * ft_atoi(av[2]));
-		printf("%d 1 died\n", ft_atoi(av[2]));
-		return (NULL);
-	}
-	philos = malloc(nb_philos * sizeof(t_philo));
-	if (!philos)
-		return (NULL);
-	forks = malloc(nb_philos * sizeof(pthread_mutex_t));
-	if (!forks)
-	{
-		free(philos);
-		return (NULL);
-	}
-	i = 0;
-	while (i < nb_philos)
-	{
-		if (pthread_mutex_init(&(forks[i]), NULL))
+		i = 0;
+		if (all_philos_ate(philos))
+			break ;
+		while (i < philos[0].nb_philos)
 		{
-			free(forks);
-			free(philos);
-			return (NULL);
+			if (chrono() - philos[i].last_meal >= philos[i].die)
+			{
+				set_finished(philos);
+				printf("%d %d died\n", chrono(), philos[i].index);
+				return (1);
+			}
+			i++;
 		}
-		i++;
+		usleep(250);
 	}
-	i = 0;
-	while (i < nb_philos)
-	{
-		philos[i].nb_philos = ft_atoi(av[1]);
-		philos[i].die = ft_atoi(av[2]);
-		philos[i].eat = ft_atoi(av[3]);
-		philos[i].sleep = ft_atoi(av[4]);
-		if (ac == 6)
-			philos[i].rounds = ft_atoi(av[5]);
-		else
-			philos[i].rounds = -1;
-		philos[i].index = i + 1;
-		philos[i].last_meal = 0;
-		philos[i].meals = 0;
-		philos[i].forks = forks;
-		philos[i].nb_philos = nb_philos;
-		if (pthread_create(&(philos[i].philo), NULL, &philo, &(philos[i])))
-		{
-			free(forks);
-			free(philos);
-			return (NULL);
-		}
-		usleep(10);
-		i++;
-	}
-	i = 0;
-	while (i < nb_philos)
-	{
-		if (pthread_join(philos[i].philo, NULL))
-		{
-			free(philos);
-			free(fork);
-			return (NULL);
-		}
-		i++;
-	}
-	return (philos);
+	return (0);
 }
 
 int	main(int ac, char **av)
 {
-	t_philo	*philos;
+	t_philo			*philos;
+	pthread_mutex_t	*forks;
 
 	if (check_args(ac, av) != NULL)
 		return (ft_putstr_fd(2, check_args(ac, av)));
-	philos = init_data(ac, av);
+	forks = init_forks(av);
+	if (!forks)
+		return (1);
+	philos = init_data(ac, av, forks);
+	if (!philos)
+	{
+		free(forks);
+		return (1);
+	}
+	loop(philos);
+	free(philos);
+	free(forks);
+	return (0);
 }

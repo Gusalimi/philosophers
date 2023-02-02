@@ -1,5 +1,9 @@
 NAME	= philo
-SRCS	= main.c ft_atoi.c ft_putstr_fd.c
+SRCS	=	main.c \
+			ft_atoi.c \
+			ft_putstr_fd.c \
+			init.c \
+			utils.c
 OBJS	= $(SRCS:.c=.o)
 CC		= gcc
 CFLAGS	= -Wall -Wextra -Werror -g3
